@@ -17,20 +17,17 @@ import CssBaseline from "@mui/material/CssBaseline";
 import GlobalStyles from "@mui/material/GlobalStyles";
 import MoneyOutlinedIcon from "@mui/icons-material/MoneyOutlined";
 import PeopleOutlinedIcon from "@mui/icons-material/PeopleOutlined";
-import LibraryMusicOutlinedIcon from "@mui/icons-material/LibraryMusicOutlined";
-import QueueMusicOutlinedIcon from "@mui/icons-material/QueueMusicOutlined";
-import PersonOutlinedIcon from "@mui/icons-material/PersonOutlined";
-import AlbumOutlinedIcon from "@mui/icons-material/AlbumOutlined";
 
 import { ColorModeContextProvider } from "@contexts/color-mode";
 import { dataProvider } from "@providers/data";
 
 import { CustomSidebar } from '@components/sidebar';
 import Dashboard from '@pages/dashboard';
+import Music from '@pages/music';
+import MusicDetail from '@pages/music/detail';
 import { SpinWheel } from '@pages/spinwheels';
 import Storyboard from '@pages/storyboard';
 import LazyLoad from '@pages/lazyload';
-import Music from '@pages/music';
 
 function App() {
   return (
@@ -41,8 +38,7 @@ function App() {
           <GlobalStyles styles={{ html: { WebkitFontSmoothing: "auto" } }} />
           <RefineSnackbarProvider>
             <DevtoolsProvider>
-              <Refine
-                dataProvider={dataProvider}
+              <Refine dataProvider={dataProvider}
                 notificationProvider={useNotificationProvider}
                 routerProvider={routerProvider}
                 resources={[
@@ -62,42 +58,6 @@ function App() {
                       icon: <PeopleOutlinedIcon />,
                     },
                   },
-                  // ── Music Library resources ──
-                  {
-                    name: "music",
-                    meta: {
-                      label: "Music Library",
-                      icon: <LibraryMusicOutlinedIcon />,
-                    },
-                  },
-                  {
-                    name: "tracks",
-                    list: "/music/tracks",
-                    show: "/music/tracks/:id",
-                    meta: {
-                      label: "Track List",
-                      icon: <QueueMusicOutlinedIcon />,
-                      parent: "music",
-                    },
-                  },
-                  {
-                    name: "artists",
-                    list: "/music/artists",
-                    meta: {
-                      label: "Artist List",
-                      icon: <PersonOutlinedIcon />,
-                      parent: "music",
-                    },
-                  },
-                  {
-                    name: "albums",
-                    list: "/music/albums",
-                    meta: {
-                      label: "Album List",
-                      icon: <AlbumOutlinedIcon />,
-                      parent: "music",
-                    },
-                  },
                 ]}
                 options={{
                   syncWithLocation: true,
@@ -107,21 +67,15 @@ function App() {
               >
                 <Box sx={{ display: 'flex' }}>
                   <CustomSidebar />
-                  <Box
-                    component="main"
-                    sx={{ flexGrow: 1, bgcolor: 'background.default', minHeight: '100vh' }}
-                  >
+                  <Box component="main" sx={{ flexGrow: 1, bgcolor: 'background.default', minHeight: '100vh' }}>
                     <Box sx={{ p: 3 }}>
                       <Routes>
-                        {/* Existing routes */}
                         <Route index element={<Dashboard />} />
+                        <Route path="/music" element={<Music />} />
+                        <Route path="/music/:trackId" element={<MusicDetail />} />
                         <Route path="/spinwheel" element={<SpinWheel />} />
                         <Route path="/lazy" element={<LazyLoad />} />
                         <Route path="/storyboard" element={<Storyboard />} />
-
-                        {/* Music Library routes */}
-                        <Route path="/music" element={<Music />} />
-
                         <Route path="*" element={<ErrorComponent />} />
                       </Routes>
                     </Box>

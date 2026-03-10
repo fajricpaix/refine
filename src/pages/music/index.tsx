@@ -1,361 +1,253 @@
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router";
 import {
-  Favorite,
-  FavoriteBorder,
-  GraphicEq,
-  MusicNote,
-  Pause,
-  PlayArrow,
-  Search,
-  SkipNext,
-  SkipPrevious,
-  VolumeUp,
-} from "@mui/icons-material";
-import {
-  Avatar,
   Box,
-  Chip,
-  IconButton,
-  InputBase,
-  LinearProgress,
-  Stack,
-  Tooltip,
-  Typography
+  Button,
+  Card,
+  CardActionArea,
+  CardMedia,
+  CircularProgress,
+  TextField,
+  Typography,
 } from "@mui/material";
-import { useEffect, useRef, useState } from "react";
+import Grid from "@mui/material/Grid2";
+import SearchIcon from "@mui/icons-material/Search";
+import { SmartCardMedia } from "@components/ui/SmartCardMedia";
 
-import { Song, parseItunesLibrary } from "../../utils/itunes";
+type ITunesSong = {
+  trackId: number;
+  trackName: string;
+  artistName: string;
+  collectionName?: string;
+  artworkUrl100: string;
+  previewUrl?: string;
+  primaryGenreName?: string;
+};
 
-const SONGS_API_PATH = "/api/itunes-library";
+type ITunesRssEntry = {
+  id: {
+    attributes: {
+      "im:id": string;
+    };
+  };
+  "im:name": { label: string };
+  "im:artist": { label: string };
+  "im:image": Array<{ label: string }>;
+};
 
-const SORT_OPTIONS = ["title", "artist", "plays", "year"] as const;
-type SortKey = typeof SORT_OPTIONS[number];
+const Music: React.FC = () => {
+  const [term, setTerm] = useState("");
+  const [songs, setSongs] = useState<ITunesSong[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>();
 
-function AlbumAvatar({ color, size = 40, spinning = false }: { color: string; size?: number; spinning?: boolean }) {
-  return (
-    <Avatar
-      sx={{
-        width: size,
-        height: size,
-        bgcolor: "transparent",
-        background: `linear-gradient(135deg, ${color}cc, ${color}44)`,
-        boxShadow: `0 4px 16px ${color}55`,
-        flexShrink: 0,
-        borderRadius: size > 60 ? "12px" : "8px",
-        animation: spinning ? "spin 4s linear infinite" : "none",
-        "@keyframes spin": { from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } },
-      }}
-    >
-      <MusicNote sx={{ fontSize: size * 0.4, color: "rgba(255,255,255,0.8)" }} />
-    </Avatar>
-  );
-}
+  const [popularSongs, setPopularSongs] = useState<ITunesSong[]>([]);
+  const [popularLoading, setPopularLoading] = useState(false);
+  const [popularError, setPopularError] = useState<string>();
 
-export default function Music() {
-  const [songs, setSongs] = useState<Song[]>([]);
-  const [currentSong, setCurrentSong] = useState<Song | null>(null);
-  const [playing, setPlaying] = useState(false);
-  const [progress, setProgress] = useState(37);
-  const [volume, setVolume] = useState(78);
-  const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<SortKey>("title");
-  const [loved, setLoved] = useState<Set<number>>(new Set());
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const mapRssEntryToSong = (entry: ITunesRssEntry): ITunesSong => {
+    const image = entry["im:image"]?.slice(-1)[0]?.label;
 
-  useEffect(() => {
-    fetch(SONGS_API_PATH)
-      .then((res) => res.text())
-      .then((text) => {
-        const parsed = parseItunesLibrary(text);
-        setSongs(parsed);
-        setCurrentSong(parsed[0] ?? null);
-        setLoved(new Set(parsed.slice(0, 8).map((s) => s.id)));
-      })
-      .catch((err) => console.error("Failed to load iTunes library:", err));
+    return {
+      trackId: Number(entry.id.attributes["im:id"]),
+      trackName: entry["im:name"].label,
+      artistName: entry["im:artist"].label,
+      artworkUrl100: image || "",
+    };
+  };
+
+  const fetchPopularSongs = useCallback(async () => {
+    setPopularError(undefined);
+    setPopularLoading(true);
+    setPopularSongs([]);
+
+    try {
+      const response = await fetch(
+        "https://itunes.apple.com/us/rss/topsongs/limit=12/json"
+      );
+      const data = await response.json();
+      const entries: ITunesRssEntry[] = data?.feed?.entry ?? [];
+      setPopularSongs(entries.map(mapRssEntryToSong));
+    } catch (err) {
+      console.error("Failed to retrieve popular songs:", err);
+      setPopularError("An error occurred while loading popular songs.");
+    } finally {
+      setPopularLoading(false);
+    }
   }, []);
 
-  useEffect(() => {
-    if (playing) {
-      intervalRef.current = setInterval(() => {
-        setProgress((p) => (p >= 100 ? 0 : p + 0.25));
-      }, 100);
-    } else {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+  const search = useCallback(async () => {
+    if (!term.trim()) {
+      setError("Enter keywords!");
+      return;
     }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [playing]);
 
-  const filtered = songs
-    .filter(
-      (s) =>
-        s.title.toLowerCase().includes(search.toLowerCase()) ||
-        s.artist.toLowerCase().includes(search.toLowerCase()) ||
-        s.album.toLowerCase().includes(search.toLowerCase())
-    )
-    .sort((a, b) => {
-      if (sortBy === "plays") return b.plays - a.plays;
-      if (sortBy === "year") return b.year - a.year;
-      return String(a[sortBy]).localeCompare(String(b[sortBy]));
-    });
+    setError(undefined);
+    setLoading(true);
+    setSongs([]);
 
-  const toggleLove = (id: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setLoved((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
+    try {
+      const response = await fetch(
+        `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=song`
+      );
+      const data = await response.json();
+      setSongs(data.results ?? []);
+    } catch (err) {
+      console.error("Failed to retrieve data:", err);
+      setError("An error occurred while searching for songs.");
+    } finally {
+      setLoading(false);
+    }
+  }, [term]);
 
-  const playNext = () => {
-    if (!currentSong || songs.length === 0) return;
-    const idx = songs.findIndex((s) => s.id === currentSong.id);
-    setCurrentSong(songs[(idx + 1) % songs.length]);
-    setProgress(0);
-  };
+  const navigate = useNavigate();
 
-  const playPrev = () => {
-    if (!currentSong || songs.length === 0) return;
-    const idx = songs.findIndex((s) => s.id === currentSong.id);
-    setCurrentSong(songs[(idx - 1 + songs.length) % songs.length]);
-    setProgress(0);
-  };
-
-  if (!currentSong) {
-    return (
-      <Box sx={{ display: "flex", height: "100vh", color: "#E2E2E8", justifyContent: "center", alignItems: "center" }}>
-        <Typography>Loading iTunes library…</Typography>
-      </Box>
-    );
-  }
+  useEffect(() => {
+    fetchPopularSongs();
+  }, [fetchPopularSongs]);
 
   return (
-    <Box sx={{ display: "flex", height: "100vh", color: "#E2E2E8", overflow: "hidden" }}>
+    <Box sx={{ p: 3, minHeight: "100vh" }}>
+      <Typography variant="h4" fontWeight="bold" mb={1}>
+        Music Library
+      </Typography>
+      <Typography variant="body2" color="text.secondary" mb={3}>
+        Search for songs using the iTunes Search API, or explore the current popular songs.
+      </Typography>
 
-      {/* ── Main Content ── */}
-      <Box sx={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-
-        {/* Header / Now Playing Bar */}
-        <Box
-          sx={{
-            px: 3, py: 1.5,
-            borderBottom: "1px solid rgba(255,255,255,0.06)",
-            backdropFilter: "blur(20px)",
+      <Box display="flex" gap={2} mb={3} flexWrap="wrap">
+        <TextField
+          label="Search songs"
+          variant="outlined"
+          value={term}
+          onChange={(e) => setTerm(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              search();
+            }
           }}
+          size="small"
+          sx={{ flex: 1, minWidth: 240 }}
+        />
+        <Button
+          variant="contained"
+          startIcon={<SearchIcon />}
+          onClick={search}
+          disabled={loading}
         >
-          <Stack direction="row" alignItems="center" spacing={2}>
-            <Box>
-              <Typography variant="h4" fontWeight={800} sx={{ color: "#E2E2E8", letterSpacing: "-0.03em", lineHeight: 1 }}>
-                Music Library
-              </Typography>
-              <Typography sx={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontFamily: "monospace" }}>
-                Apple iTunes
-              </Typography>
-            </Box>
+          Search Music
+        </Button>
+      </Box>
 
-            <Box sx={{ flex: 1, display: "flex", justifyContent: "center" }}>
-              <Stack direction="row" alignItems="center" spacing={1.5}>
-                <IconButton onClick={playPrev} size="small" sx={{ color: "rgba(255,255,255,0.5)", "&:hover": { color: "#E2E2E8" } }}>
-                  <SkipPrevious />
-                </IconButton>
-                <IconButton
-                  onClick={() => setPlaying((p) => !p)}
-                  sx={{
-                    width: 36, height: 36,
-                    bgcolor: "#fff",
-                    color: "#d60000",
-                    boxShadow: "0 0 20px rgba(255, 255, 255, 0.6)",
-                    "&:hover": { bgcolor: "#fff" },
-                  }}
-                >
-                  {playing ? <Pause fontSize="small" /> : <PlayArrow fontSize="small" />}
-                </IconButton>
-                <IconButton onClick={playNext} size="small" sx={{ color: "rgba(255,255,255,0.5)", "&:hover": { color: "#E2E2E8" } }}>
-                  <SkipNext />
-                </IconButton>
+      {error && (
+        <Typography color="error" mb={2}>
+          {error}
+        </Typography>
+      )}
 
-                <Box sx={{ minWidth: 180, textAlign: "center" }}>
-                  <Typography sx={{ fontSize: 13, fontWeight: 700 }}>{currentSong.title}</Typography>
-                  <Typography sx={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontFamily: "monospace" }}>{currentSong.artist}</Typography>
-                </Box>
+      {popularError && (
+        <Typography color="error" mb={2}>
+          {popularError}
+        </Typography>
+      )}
 
-                <Stack direction="row" alignItems="center" spacing={1} sx={{ width: 200 }}>
-                  <Typography sx={{ fontSize: 9, fontFamily: "monospace", color: "white", width: 30, textAlign: "right" }}>
-                    {Math.floor(progress * 0.03)}:{String(Math.floor((progress * 1.8) % 60)).padStart(2, "0")}
-                  </Typography>
-                  <Box
-                    sx={{ flex: 1, cursor: "pointer" }}
-                    onClick={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      setProgress(((e.clientX - rect.left) / rect.width) * 100);
-                    }}
-                  >
-                    <LinearProgress
-                      variant="determinate"
-                      value={progress}
-                      sx={{
-                        height: 3, borderRadius: 2,
-                        bgcolor: "rgba(255,255,255,0.3)",
-                        "& .MuiLinearProgress-bar": { bgcolor: "#ffffff", borderRadius: 2 },
-                      }}
-                    />
-                  </Box>
-                  <Typography sx={{ fontSize: 9, fontFamily: "monospace", color: "rgba(255,255,255,0.6)", width: 30 }}>
-                    {currentSong.duration}
-                  </Typography>
-                </Stack>
-              </Stack>
-            </Box>
-
-            {/* Volume */}
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <VolumeUp sx={{ fontSize: 16, color: "white" }} />
-              <Box
-                sx={{ width: 80, cursor: "pointer" }}
-                onClick={(e) => {
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  setVolume(Math.round(((e.clientX - rect.left) / rect.width) * 100));
-                }}
-              >
-                <LinearProgress
-                  variant="determinate"
-                  value={volume}
-                  sx={{
-                    height: 3, borderRadius: 2,
-                    bgcolor: "white",
-                    "& .MuiLinearProgress-bar": { bgcolor: "rgba(255,255,255,0.4)", borderRadius: 2 },
-                  }}
-                />
-              </Box>
-            </Stack>
-          </Stack>
-        </Box>
-
-        {/* Toolbar */}
-        <Stack direction="row" alignItems="center" spacing={2} sx={{ px: 3, py: 1.5, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-          <Box
-            sx={{
-              display: "flex", alignItems: "center", gap: 1,
-              bgcolor: "rgba(255,255,255,0.05)", borderRadius: 2,
-              px: 1.5, py: 0.5, border: "1px solid rgba(255,255,255,0.08)",
-            }}
-          >
-            <Search sx={{ fontSize: 16, color: "rgba(255,255,255,0.35)" }} />
-            <InputBase
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search songs, artists…"
-              sx={{ color: "#E2E2E8", fontSize: 12, width: 200, "& input::placeholder": { color: "rgba(255,255,255,0.3)" } }}
-            />
+      {/* Only show popular songs when not actively searching */}
+      {!term.trim() && (
+        <>
+          <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+            <Typography variant="h6" fontWeight="bold">
+              Popular Songs
+            </Typography>
           </Box>
 
-          <Stack direction="row" spacing={0.5}>
-            {SORT_OPTIONS.map((s) => (
-              <Chip
-                key={s}
-                label={s.charAt(0).toUpperCase() + s.slice(1)}
-                size="small"
-                onClick={() => setSortBy(s)}
-                sx={{
-                  fontSize: 11, fontWeight: 700, cursor: "pointer",
-                  bgcolor: sortBy === s ? "rgba(139,92,246,0.2)" : "rgba(255,255,255,0.05)",
-                  color: sortBy === s ? "#A78BFA" : "rgba(255,255,255,0.4)",
-                  border: `1px solid ${sortBy === s ? "rgba(139,92,246,0.4)" : "transparent"}`,
-                  "&:hover": { bgcolor: sortBy === s ? "rgba(139,92,246,0.25)" : "rgba(255,255,255,0.08)" },
-                }}
-              />
-            ))}
-          </Stack>
+          {popularLoading ? (
+            <Box display="flex" justifyContent="center" py={4}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : (
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+              {popularSongs.map((song) => (
+                <Grid key={`popular-${song.trackId}`} size={{ xs: 12, sm: 6, md: 4 }}>
+                  <Card>
+                    <CardActionArea
+                      onClick={() =>
+                        navigate(`/music/${song.trackId}`, { state: { song } })
+                      }
+                    >
+                      <Box 
+                        display="flex" 
+                        gap={2}>
+                        <Box width={100}>
+                          <SmartCardMedia
+                            src={song.artworkUrl100}
+                            alt={song.trackName}
+                            ratio="1/1"
+                            blurUp
+                          />
+                        </Box>
+                        <Box 
+                          flex={1} 
+                          display="flex" 
+                          flexDirection="column" 
+                          justifyContent="center">
+                          <Typography variant="subtitle2" fontWeight={600}>
+                            {song.trackName}
+                          </Typography>
+                          <Typography variant="body2" gutterBottom>
+                            {song.artistName}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </CardActionArea>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          )}
+        </>
+      )}
 
-          <Typography sx={{ fontSize: 11, color: "rgba(255,255,255,0.25)", fontFamily: "monospace", ml: "auto !important" }}>
-            {filtered.length} songs
-          </Typography>
-        </Stack>
-
-        {/* Column Headers */}
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: "36px 1fr 1fr 1fr 64px 64px 40px",
-            gap: 1, px: 3, py: 1,
-            borderBottom: "1px solid rgba(255,255,255,0.05)",
-          }}
-        >
-          {["#", "Title", "Artist", "Album", "Plays", "Time", ""].map((h) => (
-            <Typography key={h} sx={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.25)" }}>
-              {h}
-            </Typography>
-          ))}
+      {loading ? (
+        <Box display="flex" justifyContent="center" py={6}>
+          <CircularProgress />
         </Box>
-
-        {/* Song List */}
-        <Box sx={{ flex: 1, overflowY: "auto", "&::-webkit-scrollbar": { width: 4 }, "&::-webkit-scrollbar-thumb": { bgcolor: "rgba(255,255,255,0.1)", borderRadius: 2 } }}>
-          {filtered.map((song, idx) => {
-            const isActive = song.id === currentSong.id;
-            return (
-              <Box
-                key={song.id}
-                onClick={() => { setCurrentSong(song); setProgress(0); setPlaying(true); }}
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: "36px 1fr 1fr 1fr 64px 64px 40px",
-                  gap: 1, px: 3, py: 1,
-                  alignItems: "center",
-                  cursor: "pointer",
-                  borderBottom: "1px solid rgba(255,255,255,0.025)",
-                  bgcolor: isActive ? "rgba(139,92,246,0.1)" : "transparent",
-                  transition: "background 0.15s",
-                  "&:hover": { bgcolor: isActive ? "rgba(139,92,246,0.15)" : "rgba(255,255,255,0.04)" },
-                }}
-              >
-                {/* # */}
-                <Typography sx={{ fontSize: 11, fontFamily: "monospace", color: isActive ? "#A78BFA" : "rgba(255,255,255,0.25)", textAlign: "center" }}>
-                  {isActive && playing ? <GraphicEq sx={{ fontSize: 14, verticalAlign: "middle", color: "#A78BFA" }} /> : idx + 1}
-                </Typography>
-
-                {/* Title + Album Art */}
-                <Stack direction="row" alignItems="center" spacing={1.5} sx={{ overflow: "hidden" }}>
-                  <AlbumAvatar color={song.color} size={36} spinning={isActive && playing} />
-                  <Box sx={{ overflow: "hidden" }}>
-                    <Typography noWrap sx={{ fontSize: 13, fontWeight: 600, color: isActive ? "#A78BFA" : "#E2E2E8" }}>
-                      {song.title}
-                    </Typography>
-                    <Typography noWrap sx={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontFamily: "monospace" }}>
-                      {song.genre}
-                    </Typography>
+      ) : (
+        <Grid container spacing={2}>
+          {songs.map((song) => (
+            <Grid key={song.trackId} size={{ xs: 12, sm: 6, md: 4 }}>
+              <Card>
+                <CardActionArea
+                  onClick={() =>
+                    navigate(`/music/${song.trackId}`, { state: { song } })
+                  }
+                >
+                  <Box display="flex" gap={2} p={2}>
+                    <CardMedia
+                      component="img"
+                      image={song.artworkUrl100}
+                      alt={song.trackName}
+                      sx={{ width: 120, height: 120, flexShrink: 0, borderRadius: 1 }}
+                    />
+                    <Box flex={1} display="flex" flexDirection="column" justifyContent="center">
+                      <Typography variant="subtitle1" fontWeight={600}>
+                        {song.trackName}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        {song.artistName}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        {song.collectionName}
+                      </Typography>
+                    </Box>
                   </Box>
-                </Stack>
-
-                {/* Artist */}
-                <Typography noWrap sx={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>{song.artist}</Typography>
-
-                {/* Album */}
-                <Typography noWrap sx={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>{song.album}</Typography>
-
-                {/* Plays */}
-                <Typography sx={{
-                  fontSize: 11, fontFamily: "monospace", textAlign: "center",
-                  color: song.plays > 300 ? "#A78BFA" : "rgba(255,255,255,0.3)",
-                  fontWeight: song.plays > 300 ? 700 : 400,
-                }}>
-                  {song.plays}
-                </Typography>
-
-                {/* Duration */}
-                <Typography sx={{ fontSize: 11, fontFamily: "monospace", color: "rgba(255,255,255,0.35)", textAlign: "right" }}>
-                  {song.duration}
-                </Typography>
-
-                {/* Love */}
-                <Tooltip title={loved.has(song.id) ? "Remove from Loved" : "Add to Loved"}>
-                  <IconButton size="small" onClick={(e) => toggleLove(song.id, e)} sx={{ color: loved.has(song.id) ? "#EC4899" : "rgba(255,255,255,0.15)", "&:hover": { color: "#EC4899" } }}>
-                    {loved.has(song.id) ? <Favorite sx={{ fontSize: 14 }} /> : <FavoriteBorder sx={{ fontSize: 14 }} />}
-                  </IconButton>
-                </Tooltip>
-              </Box>
-            );
-          })}
-        </Box>
-      </Box>
+                </CardActionArea>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
     </Box>
   );
-}
+};
+
+export default Music;

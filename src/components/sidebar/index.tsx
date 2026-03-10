@@ -17,7 +17,7 @@ import PeopleOutlinedIcon from "@mui/icons-material/PeopleOutlined";
 import AccountBalanceOutlinedIcon from "@mui/icons-material/AccountBalanceOutlined";
 import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
-import QueueMusicOutlinedIcon from "@mui/icons-material/QueueMusicOutlined";
+import LibraryMusicIcon from '@mui/icons-material/LibraryMusic';
 import { useLocation } from "react-router";
 
 const drawerWidth = 280;
@@ -36,6 +36,12 @@ export const CustomSidebar = () => {
       path: "/",
     },
     {
+      label: "Music Library",
+      icon: <LibraryMusicIcon />,
+      onClick: () => go({ to: "/music" }),
+      path: "/music",
+    },
+    {
       label: "Spinwheel",
       icon: <StorefrontOutlinedIcon />,
       onClick: () => go({ to: "/spinwheel" }),
@@ -46,12 +52,6 @@ export const CustomSidebar = () => {
       icon: <AccountBalanceOutlinedIcon />,
       onClick: () => go({ to: "/lazy" }),
       path: "/lazy",
-    },
-    {
-      label: "Music Library",
-      icon: <QueueMusicOutlinedIcon />,
-      onClick: () => go({ to: "/music" }),
-      path: "/music",
     },
     {
       label: "Storyboard",
