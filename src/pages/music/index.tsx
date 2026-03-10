@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router";
+import MusicCards from "@components/ui/MusicCard";
+import SearchIcon from "@mui/icons-material/Search";
 import {
   Box,
   Button,
@@ -11,8 +11,8 @@ import {
   Typography,
 } from "@mui/material";
 import Grid from "@mui/material/Grid2";
-import SearchIcon from "@mui/icons-material/Search";
-import { SmartCardMedia } from "@components/ui/SmartCardMedia";
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router";
 
 type ITunesSong = {
   trackId: number;
@@ -63,7 +63,7 @@ const Music: React.FC = () => {
 
     try {
       const response = await fetch(
-        "https://itunes.apple.com/us/rss/topsongs/limit=12/json"
+        "https://itunes.apple.com/us/rss/topsongs/limit=9/json"
       );
       const data = await response.json();
       const entries: ITunesRssEntry[] = data?.feed?.entry ?? [];
@@ -159,48 +159,23 @@ const Music: React.FC = () => {
               Popular Songs
             </Typography>
           </Box>
-
+          
           {popularLoading ? (
             <Box display="flex" justifyContent="center" py={4}>
               <CircularProgress size={24} />
             </Box>
           ) : (
-            <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Grid container spacing={3} sx={{ mb: 3 }}>
               {popularSongs.map((song) => (
-                <Grid key={`popular-${song.trackId}`} size={{ xs: 12, sm: 6, md: 4 }}>
-                  <Card>
-                    <CardActionArea
-                      onClick={() =>
-                        navigate(`/music/${song.trackId}`, { state: { song } })
-                      }
-                    >
-                      <Box 
-                        display="flex" 
-                        gap={2}>
-                        <Box width={100}>
-                          <SmartCardMedia
-                            src={song.artworkUrl100}
-                            alt={song.trackName}
-                            ratio="1/1"
-                            blurUp
-                          />
-                        </Box>
-                        <Box 
-                          flex={1} 
-                          display="flex" 
-                          flexDirection="column" 
-                          justifyContent="center">
-                          <Typography variant="subtitle2" fontWeight={600}>
-                            {song.trackName}
-                          </Typography>
-                          <Typography variant="body2" gutterBottom>
-                            {song.artistName}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </CardActionArea>
-                  </Card>
-                </Grid>
+                <MusicCards
+                  key={`popular-${song.trackId}`}
+                  onClick={() => navigate(`/music/${song.trackId}`, { state: { song } })}
+                  trackId={song.trackId}
+                  trackName={song.trackName}
+                  artistName={song.artistName}
+                  collectionName={song.collectionName}
+                  image={song.artworkUrl100}
+                />
               ))}
             </Grid>
           )}
@@ -212,37 +187,17 @@ const Music: React.FC = () => {
           <CircularProgress />
         </Box>
       ) : (
-        <Grid container spacing={2}>
+        <Grid container spacing={3}>
           {songs.map((song) => (
-            <Grid key={song.trackId} size={{ xs: 12, sm: 6, md: 4 }}>
-              <Card>
-                <CardActionArea
-                  onClick={() =>
-                    navigate(`/music/${song.trackId}`, { state: { song } })
-                  }
-                >
-                  <Box display="flex" gap={2} p={2}>
-                    <CardMedia
-                      component="img"
-                      image={song.artworkUrl100}
-                      alt={song.trackName}
-                      sx={{ width: 120, height: 120, flexShrink: 0, borderRadius: 1 }}
-                    />
-                    <Box flex={1} display="flex" flexDirection="column" justifyContent="center">
-                      <Typography variant="subtitle1" fontWeight={600}>
-                        {song.trackName}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" gutterBottom>
-                        {song.artistName}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" gutterBottom>
-                        {song.collectionName}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </CardActionArea>
-              </Card>
-            </Grid>
+            <MusicCards
+              key={song.trackId}
+              onClick={() => navigate(`/music/${song.trackId}`, { state: { song } })}
+              trackId={song.trackId}
+              trackName={song.trackName}
+              artistName={song.artistName}
+              collectionName={song.collectionName}
+              image={song.artworkUrl100}
+            />
           ))}
         </Grid>
       )}
