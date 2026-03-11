@@ -16,6 +16,7 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Typography from "@mui/material/Typography";
+import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlined';
 import { useGo, useLogout } from "@refinedev/core";
 import { useContext } from "react";
 import { useLocation } from "react-router";
@@ -39,6 +40,12 @@ export const CustomSidebar = () => {
       icon: <LibraryMusicIcon />,
       onClick: () => go({ to: "/music" }),
       path: "/music",
+    },
+    {
+      label: "Member Management",
+      icon: <ManageAccountsOutlinedIcon />,
+      onClick: () => go({ to: "/member" }),
+      path: "/member",
     },
     {
       label: "Spinwheel",

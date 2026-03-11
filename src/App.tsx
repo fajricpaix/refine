@@ -28,6 +28,8 @@ import MusicDetail from '@pages/music/detail';
 import { SpinWheel } from '@pages/spinwheels';
 import Storyboard from '@pages/storyboard';
 import LazyLoad from '@pages/lazyload';
+import { MemberManagement } from '@pages/member';
+import MemberForm from '@pages/member/form';
 
 function App() {
   return (
@@ -73,6 +75,9 @@ function App() {
                         <Route index element={<Dashboard />} />
                         <Route path="/music" element={<Music />} />
                         <Route path="/music/:trackId" element={<MusicDetail />} />
+                        <Route path="/member" element={<MemberManagement />} />
+                        <Route path="/member/add" element={<MemberForm />} />
+                        <Route path="/member/edit/:id" element={<MemberForm />} />
                         <Route path="/spinwheel" element={<SpinWheel />} />
                         <Route path="/lazy" element={<LazyLoad />} />
                         <Route path="/storyboard" element={<Storyboard />} />
