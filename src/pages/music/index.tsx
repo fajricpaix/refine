@@ -1,11 +1,21 @@
 import MusicCards from "@components/ui/MusicCard";
+import { SmartCardMedia } from "@components/ui/SmartCardMedia";
+import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import SearchIcon from "@mui/icons-material/Search";
 import {
   Box,
-  Button,
+  Card,
+  CardActionArea,
+  CardContent,
   CircularProgress,
-  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   TextField,
+  Tooltip,
   Typography
 } from "@mui/material";
 import Grid from "@mui/material/Grid2";
@@ -21,6 +31,7 @@ type ITunesSong = {
   artworkUrl100: string;
   previewUrl?: string;
   primaryGenreName?: string;
+  trackTimeMillis?: number;
 };
 
 type ITunesRssEntry = {
@@ -58,6 +69,69 @@ const Music: React.FC = () => {
     };
   };
 
+  const formatDuration = (ms?: number) => {
+    if (!ms) return "-";
+    const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  };
+
+  const formatPriceToRupiah = (price?: string) => {
+    if (!price) return "-";
+
+    const normalizedPrice = price.trim();
+    if (!normalizedPrice) return "-";
+
+    if (normalizedPrice.toLowerCase() === "gratis" || normalizedPrice.toLowerCase() === "free") {
+      return "Gratis";
+    }
+
+    if (normalizedPrice.includes("Rp")) {
+      return normalizedPrice;
+    }
+
+    if (normalizedPrice.toUpperCase().includes("IDR")) {
+      const numberPart = normalizedPrice
+        .replace(/IDR/gi, "")
+        .replace(/[^\d.,]/g, "")
+        .replace(/\./g, "")
+        .replace(",", ".");
+
+      const parsedValue = Number(numberPart);
+      if (Number.isFinite(parsedValue)) {
+        return new Intl.NumberFormat("id-ID", {
+          style: "currency",
+          currency: "IDR",
+          maximumFractionDigits: 0,
+        }).format(parsedValue);
+      }
+    }
+
+    return normalizedPrice;
+  };
+
+  const renderEllipsisCell = (value: string | number) => {
+    const content = String(value || "-");
+
+    return (
+      <Tooltip title={content} arrow>
+        <Typography
+          variant="body2"
+          noWrap
+          sx={{
+            display: "block",
+            width: "100%",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {content}
+        </Typography>
+      </Tooltip>
+    );
+  };
+
   const fetchPopularSongs = useCallback(async () => {
     setPopularError(undefined);
     setPopularLoading(true);
@@ -65,11 +139,51 @@ const Music: React.FC = () => {
 
     try {
       const response = await fetch(
-        "https://itunes.apple.com/id/rss/topsongs/limit=100/json"
+        "https://itunes.apple.com/id/rss/topsongs/limit=50/json"
       );
       const data = await response.json();
       const entries: ITunesRssEntry[] = data?.feed?.entry ?? [];
-      setPopularSongs(entries.map(mapRssEntryToSong));
+
+      const baseSongs = entries.map(mapRssEntryToSong);
+      if (!baseSongs.length) {
+        setPopularSongs([]);
+        return;
+      }
+
+      const ids = baseSongs.map((song) => song.trackId).join(",");
+      const detailResponse = await fetch(
+        `https://itunes.apple.com/lookup?id=${encodeURIComponent(ids)}&entity=song`
+      );
+      const detailData = await detailResponse.json();
+      const detailResults = detailData?.results ?? [];
+
+      const detailsByTrackId = new Map<number, Partial<ITunesSong> & { trackPrice?: number; currency?: string; formattedPrice?: string }>();
+      for (const detail of detailResults) {
+        if (detail.trackId) {
+          detailsByTrackId.set(Number(detail.trackId), detail);
+        }
+      }
+
+      const enrichedSongs = baseSongs.map((song) => {
+        const detail = detailsByTrackId.get(song.trackId);
+        const formattedPrice = song.trackAmount
+          ?? detail?.formattedPrice
+          ?? (typeof detail?.trackPrice === "number" && detail?.currency
+            ? `${detail.trackPrice} ${detail.currency}`
+            : undefined);
+
+        return {
+          ...song,
+          trackAmount: formattedPrice,
+          collectionName: detail?.collectionName ?? song.collectionName,
+          trackTimeMillis: detail?.trackTimeMillis,
+          previewUrl: detail?.previewUrl,
+          primaryGenreName: detail?.primaryGenreName,
+          artworkUrl100: detail?.artworkUrl100 ?? song.artworkUrl100,
+        };
+      });
+
+      setPopularSongs(enrichedSongs);
     } catch (err) {
       console.error("Failed to retrieve popular songs:", err);
       setPopularError("An error occurred while loading popular songs.");
@@ -109,6 +223,15 @@ const Music: React.FC = () => {
   useEffect(() => {
     fetchPopularSongs();
   }, [fetchPopularSongs]);
+
+  const topThreeSongs = popularSongs.slice(0, 3);
+  const rankedTableSongs = popularSongs.slice(3);
+
+  const trophyColorByRank: Record<number, "warning" | "action" | "secondary"> = {
+    1: "warning",
+    2: "action",
+    3: "secondary",
+  };
 
   return (
     <Box sx={{ p: 3, minHeight: "100vh" }}>
@@ -184,20 +307,97 @@ const Music: React.FC = () => {
               <CircularProgress size={24} />
             </Box>
           ) : (
-            <Grid container spacing={3} sx={{ mb: 3 }}>
-              {popularSongs.map((song) => (
-                <MusicCards
-                  key={`popular-${song.trackId}`}
-                  onClick={() => navigate(`/music/${song.trackId}`, { state: { song } })}
-                  trackId={song.trackId}
-                  trackName={song.trackName}
-                  trackAmount={song.trackAmount}
-                  artistName={song.artistName}
-                  collectionName={song.collectionName}
-                  image={song.artworkUrl100}
-                />
-              ))}
-            </Grid>
+            <>
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                {topThreeSongs.map((song, index) => {
+                  const rank = index + 1;
+
+                  return (
+                    <Grid key={`popular-top-${song.trackId}`} size={{ xs: 12, md: 4 }}>
+                      <Card>
+                        <CardActionArea onClick={() => navigate(`/music/${song.trackId}`, { state: { song } })}>
+                          <CardContent>
+                            <Box display="flex" alignItems="center" gap={1} mb={1}>
+                              <EmojiEventsIcon color={trophyColorByRank[rank]} />
+                              <Typography variant="subtitle1" fontWeight={700}>
+                                #{rank}
+                              </Typography>
+                            </Box>
+
+                            <Box display="flex" gap={1}>
+                              <Box width={100} height={100}>
+                                <SmartCardMedia
+                                    src={song.artworkUrl100}
+                                    alt={song.trackName}
+                                    ratio="1/1"
+                                    blurUp
+                                  />
+                              </Box>
+                              <Box flex={1} px={1} display="flex" flexDirection="column" justifyContent="center" sx={{ minWidth: 0 }}>
+                                <Typography variant="subtitle1" fontWeight={700} noWrap>
+                                  {song.trackName}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" noWrap>
+                                  {song.artistName}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" noWrap>
+                                  {song.collectionName || "-"}
+                                </Typography>                                  
+                              </Box>
+                            </Box>
+
+                          </CardContent>
+                        </CardActionArea>
+                      </Card>
+                    </Grid>
+                  );
+                })}
+              </Grid>
+
+              <TableContainer sx={{ maxHeight: 520 }}>
+                <Table size="small" stickyHeader sx={{ tableLayout: "fixed" }}>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell width={48} sx={{ fontWeight: 700 }}>#</TableCell>
+                      <TableCell width="30%" sx={{ fontWeight: 700 }}>Judul Lagu</TableCell>
+                      <TableCell width={120} sx={{ fontWeight: 700 }}>Harga</TableCell>
+                      <TableCell width="22%" sx={{ fontWeight: 700 }}>Artis</TableCell>
+                      <TableCell width="28%" sx={{ fontWeight: 700 }}>Album</TableCell>
+                      <TableCell width={100} sx={{ fontWeight: 700 }}>Durasi</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {rankedTableSongs.map((song, index) => (
+                      <TableRow
+                        key={`popular-row-${song.trackId}`}
+                        hover
+                        sx={{
+                          cursor: "pointer",
+                          bgcolor: index % 2 === 0 ? "background.default" : "action.hover",
+                        }}
+                        onClick={() => navigate(`/music/${song.trackId}`, { state: { song } })}
+                      >
+                        <TableCell>{renderEllipsisCell(index + 4)}</TableCell>
+                        <TableCell sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                          <Box width={20} height={20}>
+                            <SmartCardMedia
+                              src={song.artworkUrl100}
+                              alt={song.trackName}
+                              ratio="1/1"
+                            />
+                          </Box>
+                          {renderEllipsisCell(song.trackName)}
+                        </TableCell>
+                        <TableCell>{renderEllipsisCell(formatPriceToRupiah(song.trackAmount))}</TableCell>
+                        <TableCell>{renderEllipsisCell(song.artistName)}</TableCell>
+                        <TableCell>{renderEllipsisCell(song.collectionName || "-")}</TableCell>
+                        <TableCell>{renderEllipsisCell(formatDuration(song.trackTimeMillis))}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
           )}
           
         </>
