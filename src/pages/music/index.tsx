@@ -354,15 +354,15 @@ const Music: React.FC = () => {
                 })}
               </Grid>
 
-              <TableContainer sx={{ maxHeight: 520 }}>
-                <Table size="small" stickyHeader sx={{ tableLayout: "fixed" }}>
+              <TableContainer>
+                <Table size="medium" sx={{ tableLayout: "fixed" }}>
                   <TableHead>
                     <TableRow>
                       <TableCell width={48} sx={{ fontWeight: 700 }}>#</TableCell>
-                      <TableCell width="30%" sx={{ fontWeight: 700 }}>Judul Lagu</TableCell>
-                      <TableCell width={120} sx={{ fontWeight: 700 }}>Harga</TableCell>
-                      <TableCell width="22%" sx={{ fontWeight: 700 }}>Artis</TableCell>
-                      <TableCell width="28%" sx={{ fontWeight: 700 }}>Album</TableCell>
+                      <TableCell width={240} sx={{ fontWeight: 700 }}>Judul Lagu</TableCell>
+                      <TableCell width={100} sx={{ fontWeight: 700 }}>Harga</TableCell>
+                      <TableCell width={180} sx={{ fontWeight: 700 }}>Artis</TableCell>
+                      <TableCell width={200} sx={{ fontWeight: 700 }}>Album</TableCell>
                       <TableCell width={100} sx={{ fontWeight: 700 }}>Durasi</TableCell>
                     </TableRow>
                   </TableHead>
