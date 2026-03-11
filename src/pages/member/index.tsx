@@ -228,7 +228,7 @@ export const MemberManagement = () => {
         </Typography>
       </Box>
 
-      <Grid display="flex">
+      <Grid container display="flex" spacing={2} >
         <Button
           sx={{ px: 2 }}
           variant="contained"
@@ -436,40 +436,35 @@ export const MemberManagement = () => {
           <Typography variant="body2" color="text.secondary">
             Menampilkan {((currentPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, sortedMembers.length)} dari {sortedMembers.length} member
           </Typography>
-          <Box display="flex" gap={1}>
+          <Box display="flex" alignItems="center" gap={1}>
             <Button
               variant="outlined"
-              size="small"
+              size="large"
               disabled={currentPage === 1}
               onClick={() => handlePageChange(currentPage - 1)}
             >
               <Icon component={ArrowBackIosNewRoundedIcon} fontSize="small" />
             </Button>
-            <Box display="flex" alignItems="center" gap={1}>
-              {(() => {
-                const MAX_PAGES_SHOWN = 5;
-                let startPage = Math.max(1, currentPage - 2);
-                let endPage = Math.min(totalPages, startPage + MAX_PAGES_SHOWN - 1);
-                if (endPage - startPage < MAX_PAGES_SHOWN - 1) {
-                  startPage = Math.max(1, endPage - MAX_PAGES_SHOWN + 1);
-                }
-                const pages = Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
-                return pages.map((page) => (
-                  <Button
-                    key={page}
-                    variant={currentPage === page ? "contained" : "outlined"}
-                    size="small"
-                    sx={{ minWidth: 40 }}
-                    onClick={() => handlePageChange(page)}
-                  >
-                    {page}
-                  </Button>
-                ));
-              })()}
-            </Box>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                height: 32,
+                width: 32,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "1px solid",
+                borderColor: "primary.main",
+                borderRadius: 1,
+                color: "primary.main",
+                fontWeight: 600,
+                mx: 1
+              }}>
+              {currentPage}
+            </Typography>
             <Button
               variant="outlined"
-              size="small"
+              size="large"
               disabled={currentPage === totalPages}
               onClick={() => handlePageChange(currentPage + 1)}
             >
