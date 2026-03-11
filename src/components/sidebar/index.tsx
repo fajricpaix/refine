@@ -1,25 +1,24 @@
-import { useContext } from "react";
-import { useGo, useLogout } from "@refinedev/core";
 import { ColorModeContext } from "@contexts/color-mode";
+import DarkModeOutlined from "@mui/icons-material/DarkModeOutlined";
+import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
+import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
+import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
+import LibraryMusicIcon from '@mui/icons-material/LibraryMusic';
+import LightModeOutlined from "@mui/icons-material/LightModeOutlined";
+import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
+import PeopleOutlinedIcon from "@mui/icons-material/PeopleOutlined";
+import StorefrontOutlinedIcon from "@mui/icons-material/StorefrontOutlined";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Drawer from "@mui/material/Drawer";
 import List from "@mui/material/List";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Typography from "@mui/material/Typography";
-import Button from "@mui/material/Button";
-import DarkModeOutlined from "@mui/icons-material/DarkModeOutlined";
-import LightModeOutlined from "@mui/icons-material/LightModeOutlined";
-import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
-import StorefrontOutlinedIcon from "@mui/icons-material/StorefrontOutlined";
-import PeopleOutlinedIcon from "@mui/icons-material/PeopleOutlined";
-import AccountBalanceOutlinedIcon from "@mui/icons-material/AccountBalanceOutlined";
-import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
-import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
-import LibraryMusicIcon from '@mui/icons-material/LibraryMusic';
+import { useGo, useLogout } from "@refinedev/core";
+import { useContext } from "react";
 import { useLocation } from "react-router";
-
 const drawerWidth = 280;
 
 export const CustomSidebar = () => {
@@ -49,7 +48,7 @@ export const CustomSidebar = () => {
     },
     {
       label: "Lazy Loading",
-      icon: <AccountBalanceOutlinedIcon />,
+      icon: <HourglassEmptyIcon />,
       onClick: () => go({ to: "/lazy" }),
       path: "/lazy",
     },

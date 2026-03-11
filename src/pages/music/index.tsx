@@ -3,12 +3,10 @@ import SearchIcon from "@mui/icons-material/Search";
 import {
   Box,
   Button,
-  Card,
-  CardActionArea,
-  CardMedia,
   CircularProgress,
+  IconButton,
   TextField,
-  Typography,
+  Typography
 } from "@mui/material";
 import Grid from "@mui/material/Grid2";
 import { useCallback, useEffect, useState } from "react";
@@ -17,6 +15,7 @@ import { useNavigate } from "react-router";
 type ITunesSong = {
   trackId: number;
   trackName: string;
+  trackAmount?: string;
   artistName: string;
   collectionName?: string;
   artworkUrl100: string;
@@ -33,11 +32,13 @@ type ITunesRssEntry = {
   "im:name": { label: string };
   "im:artist": { label: string };
   "im:image": Array<{ label: string }>;
+  "im:price"?: { label: string };
 };
 
 const Music: React.FC = () => {
   const [term, setTerm] = useState("");
   const [songs, setSongs] = useState<ITunesSong[]>([]);
+  const [isSearched, setIsSearched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -50,6 +51,7 @@ const Music: React.FC = () => {
 
     return {
       trackId: Number(entry.id.attributes["im:id"]),
+      trackAmount: entry["im:price"]?.label,
       trackName: entry["im:name"].label,
       artistName: entry["im:artist"].label,
       artworkUrl100: image || "",
@@ -63,7 +65,7 @@ const Music: React.FC = () => {
 
     try {
       const response = await fetch(
-        "https://itunes.apple.com/us/rss/topsongs/limit=9/json"
+        "https://itunes.apple.com/id/rss/topsongs/limit=100/json"
       );
       const data = await response.json();
       const entries: ITunesRssEntry[] = data?.feed?.entry ?? [];
@@ -79,9 +81,11 @@ const Music: React.FC = () => {
   const search = useCallback(async () => {
     if (!term.trim()) {
       setError("Enter keywords!");
+      setIsSearched(false);
       return;
     }
 
+    setIsSearched(true);
     setError(undefined);
     setLoading(true);
     setSongs([]);
@@ -108,36 +112,51 @@ const Music: React.FC = () => {
 
   return (
     <Box sx={{ p: 3, minHeight: "100vh" }}>
-      <Typography variant="h4" fontWeight="bold" mb={1}>
-        Music Library
-      </Typography>
-      <Typography variant="body2" color="text.secondary" mb={3}>
-        Search for songs using the iTunes Search API, or explore the current popular songs.
-      </Typography>
 
-      <Box display="flex" gap={2} mb={3} flexWrap="wrap">
-        <TextField
-          label="Search songs"
-          variant="outlined"
-          value={term}
-          onChange={(e) => setTerm(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              search();
-            }
-          }}
-          size="small"
-          sx={{ flex: 1, minWidth: 240 }}
-        />
-        <Button
-          variant="contained"
-          startIcon={<SearchIcon />}
-          onClick={search}
-          disabled={loading}
-        >
-          Search Music
-        </Button>
-      </Box>
+      <Grid container spacing={2} mb={2}>
+        <Grid size={{ xs: 12, md: 8 }}>
+          <Box>
+            <Typography variant="h4" fontWeight="bold" mb={1}>
+              Music Library
+            </Typography>
+            <Typography variant="body2" color="text.secondary" mb={3}>
+              Search for songs using the iTunes Search API, or explore the current popular songs.
+            </Typography>
+          </Box>
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 4 }}>
+          <Box sx={{ display: "flex", alignItems: "flex-end" }}>
+            <TextField
+              label="Search songs"
+              variant="standard"
+              value={term}
+              onChange={(e) => {
+                const value = e.target.value;
+                setTerm(value);
+
+                if (!value.trim()) {
+                  setIsSearched(false);
+                  setSongs([]);
+                  setError(undefined);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  search();
+                }
+              }}
+              size="small"
+              sx={{ flex: 1, minWidth: 240, width: "100%" }}
+              slotProps={{
+                input: {
+                  endAdornment: <SearchIcon sx={{ mr: 1, mb:1 }} />,
+                }
+              }}
+            />
+          </Box>
+        </Grid>
+      </Grid>
 
       {error && (
         <Typography color="error" mb={2}>
@@ -151,15 +170,15 @@ const Music: React.FC = () => {
         </Typography>
       )}
 
-      {/* Only show popular songs when not actively searching */}
-      {!term.trim() && (
+      {/* Only show popular songs when search mode is not active */}
+      {!isSearched && !term.trim() && (
         <>
           <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
             <Typography variant="h6" fontWeight="bold">
               Popular Songs
             </Typography>
           </Box>
-          
+
           {popularLoading ? (
             <Box display="flex" justifyContent="center" py={4}>
               <CircularProgress size={24} />
@@ -172,6 +191,7 @@ const Music: React.FC = () => {
                   onClick={() => navigate(`/music/${song.trackId}`, { state: { song } })}
                   trackId={song.trackId}
                   trackName={song.trackName}
+                  trackAmount={song.trackAmount}
                   artistName={song.artistName}
                   collectionName={song.collectionName}
                   image={song.artworkUrl100}
@@ -179,19 +199,23 @@ const Music: React.FC = () => {
               ))}
             </Grid>
           )}
+          
         </>
       )}
+
+      {/* Show  */}
 
       {loading ? (
         <Box display="flex" justifyContent="center" py={6}>
           <CircularProgress />
         </Box>
-      ) : (
+      ) : isSearched ? (
         <Grid container spacing={3}>
           {songs.map((song) => (
             <MusicCards
               key={song.trackId}
               onClick={() => navigate(`/music/${song.trackId}`, { state: { song } })}
+              trackAmount={song.trackAmount}
               trackId={song.trackId}
               trackName={song.trackName}
               artistName={song.artistName}
@@ -200,7 +224,7 @@ const Music: React.FC = () => {
             />
           ))}
         </Grid>
-      )}
+      ) : null}
     </Box>
   );
 };
