@@ -316,37 +316,37 @@ const Music: React.FC = () => {
                     <Grid key={`popular-top-${song.trackId}`} size={{ xs: 12, md: 4 }}>
                       <Card>
                         <CardActionArea onClick={() => navigate(`/music/${song.trackId}`, { state: { song } })}>
-                          <CardContent>
-                            <Box display="flex" alignItems="center" gap={1} mb={1}>
-                              <EmojiEventsIcon color={trophyColorByRank[rank]} />
+                            <CardContent sx={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+                            <Box display="flex" alignItems="center" justifyContent="center" gap={1} mb={1}>
+                              <EmojiEventsIcon sx={{ fontSize: 48 }} color={trophyColorByRank[rank]} />
                               <Typography variant="subtitle1" fontWeight={700}>
-                                #{rank}
+                              #{rank}
                               </Typography>
                             </Box>
 
-                            <Box display="flex" gap={1}>
+                            <Box display="flex" flexDirection="column" alignItems="center" gap={1}>
                               <Box width={100} height={100}>
-                                <SmartCardMedia
-                                    src={song.artworkUrl100}
-                                    alt={song.trackName}
-                                    ratio="1/1"
-                                    blurUp
-                                  />
+                              <SmartCardMedia
+                                src={song.artworkUrl100}
+                                alt={song.trackName}
+                                ratio="1/1"
+                                blurUp
+                                />
                               </Box>
-                              <Box flex={1} px={1} display="flex" flexDirection="column" justifyContent="center" sx={{ minWidth: 0 }}>
-                                <Typography variant="subtitle1" fontWeight={700} noWrap>
-                                  {song.trackName}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary" noWrap>
-                                  {song.artistName}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary" noWrap>
-                                  {song.collectionName || "-"}
-                                </Typography>                                  
+                              <Box display="flex" flexDirection="column" justifyContent="center" sx={{ minWidth: 0 }}>
+                              <Typography variant="subtitle1" fontWeight={700} noWrap>
+                                {song.trackName}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary" noWrap>
+                                {song.artistName}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary" noWrap>
+                                {song.collectionName || "-"}
+                              </Typography>                                  
                               </Box>
                             </Box>
 
-                          </CardContent>
+                            </CardContent>
                         </CardActionArea>
                       </Card>
                     </Grid>
