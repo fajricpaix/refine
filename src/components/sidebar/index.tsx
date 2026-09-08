@@ -42,7 +42,7 @@ export const CustomSidebar = () => {
       path: "/music",
     },
     {
-      label: "Member Management",
+      label: "Member Result",
       icon: <ManageAccountsOutlinedIcon />,
       onClick: () => go({ to: "/member" }),
       path: "/member",

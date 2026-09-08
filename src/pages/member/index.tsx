@@ -221,7 +221,7 @@ export const MemberManagement = () => {
     <Stack spacing={4} px={4} pt={4}>
       <Box>
         <Typography variant="h4" fontWeight="bold">
-          Member Management
+          Member Result Test
         </Typography>
         <Typography variant="body2" color="text.secondary" mt={0.5}>
           Manage member data registered in the system.
